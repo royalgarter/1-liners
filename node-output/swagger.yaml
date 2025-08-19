@@ -1,0 +1,348 @@
+{
+  "openapi" : "3.0.0",
+  "info" : {
+    "title" : "SkillOrbit AI Module API",
+    "description" : "API specification for the communication between the SkillOrbit core backend and the separated A-Z AI modules.\nThe core backend acts as the client, calling the AI modules with a rich user context to get a structured, actionable response.\n",
+    "version" : "3.0.0"
+  },
+  "servers" : [ {
+    "url" : "https://virtserver.swaggerhub.com/ATADI/SkillOrbit/3.0.0",
+    "description" : "SwaggerHub API Auto Mocking"
+  }, {
+    "url" : "https://api.skillorbit.ai/v1/ai",
+    "description" : "Production AI Module Server"
+  } ],
+  "paths" : {
+    "/generateByModule" : {
+      "post" : {
+        "tags" : [ "AI Modules" ],
+        "summary" : "Invoke an A-Z AI Module",
+        "description" : "This single endpoint is used to get a response from a specific AI module.\nThe backend sends the complete user and session context, and the AI module returns\na structured response containing conversational text, suggested actions, and generated content.\n",
+        "operationId" : "invokeAIModule",
+        "requestBody" : {
+          "description" : "Payload containing all necessary context for the AI module.",
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/AIModuleRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Successful response from the AI module.",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AIModuleResponse"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Bad Request - The request payload is invalid or missing required fields."
+          },
+          "500" : {
+            "description" : "Internal Server Error - An error occurred within the AI module."
+          }
+        }
+      }
+    }
+  },
+  "components" : {
+    "schemas" : {
+      "AIModuleRequest" : {
+        "required" : [ "module", "sessionContext", "userData" ],
+        "type" : "object",
+        "properties" : {
+          "module" : {
+            "$ref" : "#/components/schemas/Module"
+          },
+          "userData" : {
+            "$ref" : "#/components/schemas/UserData"
+          },
+          "sessionContext" : {
+            "$ref" : "#/components/schemas/SessionContext"
+          },
+          "platformData" : {
+            "$ref" : "#/components/schemas/PlatformData"
+          }
+        }
+      },
+      "Module" : {
+        "required" : [ "slug" ],
+        "type" : "object",
+        "properties" : {
+          "slug" : {
+            "type" : "string",
+            "description" : "The slug of module",
+            "example" : "migration/homescreen",
+            "enum" : [ "migration/homescreen", "migration/default", "migration/notes", "migration/tasks" ]
+          }
+        },
+        "description" : "Module"
+      },
+      "UserData" : {
+        "required" : [ "profile", "userId" ],
+        "type" : "object",
+        "properties" : {
+          "userId" : {
+            "type" : "string",
+            "format" : "uuid",
+            "example" : "123e4567-e89b-12d3-a456-426614174000"
+          },
+          "profile" : {
+            "$ref" : "#/components/schemas/UserProfile"
+          }
+        },
+        "description" : "Comprehensive data about the user."
+      },
+      "UserProfile" : {
+        "type" : "object",
+        "properties" : {
+          "name" : {
+            "type" : "string",
+            "example" : "Priya"
+          },
+          "preferredAITone" : {
+            "type" : "string",
+            "description" : "The tone the user prefers for the AI coach.",
+            "example" : "coach",
+            "enum" : [ "mentor", "friend", "coach", "cheerleader", "expert" ]
+          },
+          "goal" : {
+            "$ref" : "#/components/schemas/UserGoal"
+          }
+        },
+        "description" : "User's profile and preferences."
+      },
+      "UserGoal" : {
+        "type" : "object",
+        "properties" : {
+          "goalType" : {
+            "type" : "string",
+            "description" : "The high-level type of the user's goal.",
+            "example" : "migration",
+            "enum" : [ "migration", "career_development", "skill_improvement" ]
+          },
+          "details" : {
+            "type" : "object",
+            "description" : "A flexible object containing key-value pairs specific to the goalType.",
+            "example" : {
+              "dreamCountry" : "Canada",
+              "targetTimeline" : "12 months",
+              "familyStatus" : "Migrating with spouse and one child",
+              "ieltsOetStatus" : "Booked for next month"
+            }
+          }
+        },
+        "description" : "A generic structure for defining a user's goal."
+      },
+      "SessionContext" : {
+        "required" : [ "currentModule", "lastUserInput" ],
+        "type" : "object",
+        "properties" : {
+          "currentModule" : {
+            "type" : "string",
+            "description" : "The A-Z module the user is currently interacting with.",
+            "example" : "F",
+            "enum" : [ "A", "B", "C", "D", "E", "F", "G" ]
+          },
+          "lastUserInput" : {
+            "type" : "string",
+            "description" : "The most recent text or voice-to-text input from the user.",
+            "example" : "I'm not sure how to start my migration plan."
+          },
+          "conversationHistory" : {
+            "maxItems" : 20,
+            "type" : "array",
+            "description" : "The last 20 messages of the conversation for context.",
+            "items" : {
+              "$ref" : "#/components/schemas/ConversationMessage"
+            }
+          }
+        },
+        "description" : "Context of the current user interaction."
+      },
+      "ConversationMessage" : {
+        "type" : "object",
+        "properties" : {
+          "role" : {
+            "type" : "string",
+            "enum" : [ "user", "assistant" ]
+          },
+          "content" : {
+            "type" : "string"
+          }
+        },
+        "example" : {
+          "role" : "user",
+          "content" : "What should I do first?"
+        }
+      },
+      "PlatformData" : {
+        "type" : "object",
+        "properties" : {
+          "completedModules" : {
+            "type" : "array",
+            "description" : "List of A-Z modules the user has already completed.",
+            "items" : {
+              "type" : "string",
+              "example" : "A"
+            }
+          },
+          "relatedNotes" : {
+            "type" : "array",
+            "description" : "Array of related notes, filtered by the backend for the current module/context.",
+            "items" : {
+              "$ref" : "#/components/schemas/Note"
+            }
+          },
+          "relatedTasks" : {
+            "type" : "array",
+            "description" : "Array of related tasks for the current module.",
+            "items" : {
+              "$ref" : "#/components/schemas/Task"
+            }
+          }
+        },
+        "description" : "Data from the wider SkillOrbit platform related to the user."
+      },
+      "Note" : {
+        "type" : "object",
+        "properties" : {
+          "noteId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "title" : {
+            "type" : "string",
+            "example" : "My 'Why' for Moving"
+          },
+          "content" : {
+            "type" : "string",
+            "example" : "I want to provide a better future for my children and grow in my nursing career."
+          },
+          "relatedModule" : {
+            "type" : "string",
+            "example" : "D"
+          }
+        }
+      },
+      "Task" : {
+        "type" : "object",
+        "properties" : {
+          "taskId" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "description" : {
+            "type" : "string",
+            "example" : "Complete skills assessment for Canadian nursing board."
+          },
+          "isCompleted" : {
+            "type" : "boolean",
+            "example" : false
+          }
+        }
+      },
+      "AIModuleResponse" : {
+        "type" : "object",
+        "properties" : {
+          "aiResponse" : {
+            "$ref" : "#/components/schemas/AIResponse"
+          },
+          "suggestedActions" : {
+            "type" : "array",
+            "description" : "A list of suggested next steps for the user, to be rendered as interactive elements.",
+            "items" : {
+              "$ref" : "#/components/schemas/SuggestedAction"
+            }
+          },
+          "generatedContent" : {
+            "$ref" : "#/components/schemas/GeneratedContent"
+          },
+          "autoParseData" : {
+            "$ref" : "#/components/schemas/AIModuleResponse_autoParseData"
+          }
+        },
+        "description" : "A structured response from the AI module."
+      },
+      "AIResponse" : {
+        "type" : "object",
+        "properties" : {
+          "content" : {
+            "type" : "string",
+            "description" : "The main conversational text from the AI.",
+            "example" : "Creating a roadmap is a great step! It breaks down the journey into manageable parts. Based on your goal of moving to Canada, a good first step is to create a document checklist. Would you like me to help you start one?"
+          },
+          "emotionalTone" : {
+            "type" : "string",
+            "description" : "The emotional tone of the response, which the UI can use.",
+            "example" : "motivating",
+            "enum" : [ "motivating", "calming", "practical", "inspirational" ]
+          }
+        }
+      },
+      "SuggestedAction" : {
+        "type" : "object",
+        "properties" : {
+          "prompt" : {
+            "type" : "string",
+            "description" : "The text to display on the button or interactive element.",
+            "example" : "Yes, start my checklist"
+          },
+          "actionType" : {
+            "type" : "string",
+            "description" : "The type of action the backend should perform.",
+            "example" : "CREATE_TASK",
+            "enum" : [ "CONTINUE_CONVERSATION", "CREATE_TASK", "OPEN_JOURNAL", "NAVIGATE_MODULE" ]
+          },
+          "actionValue" : {
+            "type" : "string",
+            "description" : "A value associated with the action, e.g., the module to navigate to.",
+            "example" : "E"
+          }
+        }
+      },
+      "GeneratedContent" : {
+        "type" : "object",
+        "properties" : {
+          "type" : {
+            "type" : "string",
+            "example" : "CHECKLIST",
+            "enum" : [ "CHECKLIST", "JOURNAL_ENTRY", "ROADMAP_BUILDER" ]
+          },
+          "data" : {
+            "type" : "object",
+            "description" : "The actual content data, structure depends on the type.",
+            "example" : {
+              "title" : "Initial Document Checklist for Canada",
+              "items" : [ "Passport copy", "Birth certificate", "IELTS/OET results", "Educational transcripts" ]
+            }
+          }
+        },
+        "description" : "Structured content created by the AI, like a checklist or journal prompt."
+      },
+      "AIModuleResponse_autoParseData" : {
+        "type" : "object",
+        "properties" : {
+          "updatedGoalDetails" : {
+            "type" : "object",
+            "description" : "Key-value pairs of any goal details that should be updated.",
+            "example" : {
+              "targetTimeline" : "9 months"
+            }
+          },
+          "newChecklistItem" : {
+            "type" : "string",
+            "example" : "Research visa application fees."
+          }
+        },
+        "description" : "Key information automatically extracted by the AI from the user's response to update the platform."
+      }
+    }
+  }
+}
